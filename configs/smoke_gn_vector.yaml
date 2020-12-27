@@ -6,11 +6,13 @@ INPUT:
 DATASETS:
   DETECT_CLASSES: ("Car", "Cyclist", "Pedestrian")
   TRAIN: ("kitti_train",)
-  TEST: ("kitti_test",)
-  TRAIN_SPLIT: "trainval"
-  TEST_SPLIT: "test"
+  TEST: ("kitti_train",)
+  TRAIN_SPLIT: "train"
+  TEST_SPLIT: "val"
 SOLVER:
   BASE_LR: 2.5e-4
   STEPS: (10000, 18000)
   MAX_ITERATION: 25000
-  IMS_PER_BATCH: 32
+  IMS_PER_BATCH: 16
+  EVALUATE_PERIOD: 1000
+OUTPUT_DIR: "./checkpoints/DLA34_001nd"

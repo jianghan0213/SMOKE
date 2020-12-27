@@ -108,7 +108,8 @@ def do_train(
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
         # todo: add evaluations here
-        # if iteration % evaluate_period == 0:
+        if iteration % evaluate_period == 0:
+            checkpointer.save("model_{:07d}".format(iteration), **arguments)
         # test_net.main()
 
     total_training_time = time.time() - start_training_time
