@@ -7,7 +7,8 @@
 .idea
 .so
 .pyc
-/checkpoints
-/datasets
-/__pycache__
+checkpoints/
+datasets/
+
+__pycache__/
 _ext.cpython-37m-x86_64-linux-gnu.so

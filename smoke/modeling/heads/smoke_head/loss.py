@@ -47,9 +47,7 @@ class SMOKELossComputation():
         targets_proj_points = targets_variables["proj_points"]
 
         # obtain prediction from points of interests
-        pred_regression_pois = select_point_of_interest(
-            batch, targets_proj_points, pred_regression
-        )
+        pred_regression_pois = pred_regression.permute(0, 2, 1).contiguous()
         pred_regression_pois = pred_regression_pois.view(-1, channel)
 
         # FIXME: fix hard code here
@@ -109,10 +107,8 @@ class SMOKELossComputation():
             return pred_box_3d
 
     def __call__(self, predictions, targets):
-        pred_heatmap, pred_regression = predictions[0], predictions[1]
-
-        targets_heatmap, targets_regression, targets_variables \
-            = self.prepare_targets(targets)
+        pred_heatmap, pred_regression, targets_heatmap, targets_regression, targets_variables = \
+             predictions[0], predictions[1], predictions[2], predictions[3], predictions[4]
 
         predict_boxes3d = self.prepare_predictions(targets_variables, pred_regression)
 

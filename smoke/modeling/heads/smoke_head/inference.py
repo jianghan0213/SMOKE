@@ -33,21 +33,12 @@ class PostProcessor(nn.Module):
                     size=size)
 
     def forward(self, predictions, targets):
-        pred_heatmap, pred_regression = predictions[0], predictions[1]
-        batch = pred_heatmap.shape[0]
+        pred_regression, scores, clses, ys, xs = \
+            predictions[0], predictions[1], predictions[2], predictions[3], predictions[4]
 
         target_varibales = self.prepare_targets(targets)
-
-        heatmap = nms_hm(pred_heatmap)
-
-        scores, indexs, clses, ys, xs = select_topk(
-            heatmap,
-            K=self.max_detection,
-        )
-
-        pred_regression = select_point_of_interest(
-            batch, indexs, pred_regression
-        )
+        # [N, K, 8]
+        pred_regression = pred_regression.permute(0, 2, 1).contiguous()
         pred_regression_pois = pred_regression.view(-1, self.reg_head)
 
         pred_proj_points = torch.cat([xs.view(-1, 1), ys.view(-1, 1)], dim=1)
