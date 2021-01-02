@@ -18,7 +18,7 @@ from smoke.modeling.detector import build_detection_model
 from smoke.engine.test_net import run_test
 
 
-def train(cfg, model, device, distributed):
+def train(cfg, args, model, device, distributed):
     optimizer = make_optimizer(cfg, model)
     scheduler = make_lr_scheduler(cfg, optimizer)
 
@@ -30,8 +30,14 @@ def train(cfg, model, device, distributed):
     checkpointer = DetectronCheckpointer(
         cfg, model, optimizer, scheduler, output_dir, save_to_disk
     )
-    extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT)
-    arguments.update(extra_checkpoint_data)
+    
+    if cfg.MODEL.BACKBONE.CONV_BODY is "DLA-34-DCN":
+        ckpt = cfg.MODEL.WEIGHT if args.ckpt is None else args.ckpt
+        extra_checkpoint_data = checkpointer.load(ckpt)
+        arguments.update(extra_checkpoint_data)
+    elif args.ckpt is not None:
+        extra_checkpoint_data = checkpointer.load(args.ckpt)
+        arguments.update(extra_checkpoint_data)
 
     data_loader = make_data_loader(
         cfg,
@@ -85,7 +91,7 @@ def main(args):
             find_unused_parameters=True,
         )
 
-    train(cfg, model, device, distributed)
+    train(cfg, args, model, device, distributed)
 
 
 if __name__ == '__main__':

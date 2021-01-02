@@ -108,7 +108,7 @@ def do_train(
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
         # todo: add evaluations here
-        if iteration % evaluate_period == 0:
+        if iteration % cfg.SOLVER.EVALUATE_PERIOD == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         # test_net.main()
 
