@@ -18,4 +18,4 @@ SOLVER:
   MAX_ITERATION: 25000
   IMS_PER_BATCH: 8
   EVALUATE_PERIOD: 1000
-OUTPUT_DIR: "/data-input/checkpoints/RESNET34_007nd"
+OUTPUT_DIR: "/data-input/checkpoints/RESNET34_009nd"
