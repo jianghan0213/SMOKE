@@ -30,7 +30,7 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
-    checkpoints_path = "./checkpoints/DLA34_003nd"
+    checkpoints_path = cfg.OUTPUT_DIR
     
     val_mAP = []
     iteration_list = []
