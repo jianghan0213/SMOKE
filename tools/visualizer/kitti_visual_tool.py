@@ -32,41 +32,6 @@ def kitti_visual_tool_api(image_file, calib_file, label_file, velodyne_file=None
     image = np.vstack([image, bev_image])
   return image
 
-def pred_visual_tool(kitti_root, checkpoints_name, output_path, split="test"):
-  image_path = os.path.join(kitti_root, "training/image_2")
-  velodyne_path = os.path.join(kitti_root, "training/velodyne")
-  calib_path = os.path.join(kitti_root, "training/calib")
-  label_path = os.path.join(kitti_root, "training/label_2")
-  if split == "train":
-    imageset_txt = os.path.join(kitti_root, "ImageSets", "train.txt")
-  elif split == "val":
-    imageset_txt = os.path.join(kitti_root, "ImageSets", "val.txt")
-  elif split == "test":
-    imageset_txt = os.path.join(kitti_root, "ImageSets", "test.txt")
-  elif split == "visual":
-    imageset_txt = os.path.join(kitti_root, "ImageSets", "visual.txt")
-  else:
-    raise ValueError("Invalid split!")
-
-  image_ids = []
-  for line in open(imageset_txt, "r"):
-    base_name = line.replace("\n", "")
-    if not os.path.exists(os.path.join(output_path, base_name)):
-      os.makedirs(os.path.join(output_path, base_name))
-    image_ids.append(base_name)
-
-  for i in range(len(image_ids)):
-    base_name = image_ids[i]
-    image_2_file = os.path.join(image_path, base_name + ".png")
-    velodyne_file = os.path.join(velodyne_path, base_name + ".bin")
-    calib_file = os.path.join(calib_path, base_name + ".txt")
-    label_2_file = os.path.join(label_path, base_name + ".txt")
-    image = kitti_visual_tool_api(image_2_file, calib_file, label_2_file, velodyne_file)
-    
-    save_path = os.path.join(output_path, base_name)
-    save_file = os.path.join(save_path, checkpoints_name)
-    cv2.imsave(save_file, image)
-
 
 def kitti_visual_tool(kitti_root):
   if not os.path.exists(kitti_root):

@@ -68,7 +68,7 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
-    checkpoints_path = "./checkpoints/DLA34_003nd"
+    checkpoints_path = cfg.OUTPUT_DIR
     
     val_mAP = []
     iteration_list = []
@@ -92,15 +92,15 @@ def main(args):
         run_test(cfg, model)
         
         gt_label_path = "datasets/kitti/training/label_2/"
-        pred_label_path = os.path.join(cfg.OUTPUT_DIR, "inference", "kitti_train", "data")
+        pred_label_path = os.path.join(checkpoints_path, "inference", "kitti_train", "data")
         result_dict = evaluate_kitti_mAP(gt_label_path, pred_label_path, ["Car", "Pedestrian", "Cyclist"])
         
         if result_dict is not None:
             mAP_3d_moderate = result_dict["mAP3d"][1]
             val_mAP.append(mAP_3d_moderate)
-            with open(os.path.join(cfg.OUTPUT_DIR, "val_mAP.json"),'w') as file_object:
+            with open(os.path.join(checkpoints_path, "val_mAP.json"),'w') as file_object:
                 json.dump(val_mAP, file_object)
-            with open(os.path.join(cfg.OUTPUT_DIR, 'epoch_result_{:07d}_{}.txt'.format(iteration, round(mAP_3d_moderate, 2))), "w") as f:
+            with open(os.path.join(checkpoints_path, 'epoch_result_{:07d}_{}.txt'.format(iteration, round(mAP_3d_moderate, 2))), "w") as f:
                 f.write(result_dict["result"])
             print(result_dict["result"])
 
