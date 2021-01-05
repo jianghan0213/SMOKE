@@ -256,22 +256,13 @@ class DLA(nn.Module):
             out_channel = channels[self.first_level]
 
         up_scales = [2 ** i for i in range(self.last_level - self.first_level)]
-        self.ida_up = IDAUp(in_channels=channels[self.first_level:self.last_level],
-                            out_channel=out_channel,
-                            up_f=up_scales,
-                            norm_func=norm_func)
+
 
     def forward(self, x):
         x = self.base(x)
         x = self.dla_up(x)
 
-        y = []
-        for i in range(self.last_level - self.first_level):
-            y.append(x[i].clone())
-        self.ida_up(y, 0, len(y))
-
-        # todo: this can be further cleaned
-        return y[-1]
+        return x[-4]
 
 
 class DLABase(nn.Module):
