@@ -6,8 +6,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from kitti_utils import *
-from utils import (
+from tools.visualizer.kitti_utils import *
+from tools.visualizer.utils import (
   load_intrinsic, compute_box_3d_camera, project_to_image, 
   draw_box_3d, draw_3d_box_on_image, draw_box_on_bev_image)
 

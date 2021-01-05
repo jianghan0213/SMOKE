@@ -2,7 +2,7 @@ import sys
 import cv2
 import csv
 import numpy as np
-from kitti_utils import *
+from tools.visualizer.kitti_utils import *
 
 range = 60
 
