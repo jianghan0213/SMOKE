@@ -89,7 +89,6 @@ def main(args):
     iteration_list = sorted(iteration_list)
     
     for iteration in iteration_list:
-        
         model = build_detection_model(cfg)
         device = torch.device(cfg.MODEL.DEVICE)
         model.to(device)
@@ -112,11 +111,6 @@ def main(args):
             with open(os.path.join(checkpoints_path, 'epoch_result_{:07d}_{}.txt'.format(iteration, round(mAP_3d_moderate, 2))), "w") as f:
                 f.write(result_dict["result"])
             print(result_dict["result"])
-
-        if iteration > 5000:
-            kitti_root = "datasets/kitti"
-            checkpoints_name = model_name.split('.')[0]
-            pred_visualization(kitti_root, checkpoints_name, cfg.OUTPUT_DIR, "visual")
 
 if __name__ == '__main__':
     args = default_argument_parser().parse_args()
