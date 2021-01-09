@@ -114,6 +114,17 @@ class SMOKELossComputation():
 
         hm_loss = self.cls_loss(pred_heatmap, targets_heatmap) * self.loss_weight[0]
 
+        # cls score
+        targets_proj_points = targets_variables["proj_points"]
+        batch = pred_heatmap.shape[0]
+        cls_scores = select_point_of_interest(batch, targets_proj_points, pred_heatmap)
+        print("cls_scores")
+        print(cls_scores)
+        cls_scores_max = torch.max(cls_scores, -1)[0]
+        print("cls_score_max")
+        print(cls_scores_max)
+        print(cls_scores_max.shape)
+
         targets_regression = targets_regression.view(
             -1, targets_regression.shape[2], targets_regression.shape[3]
         )
