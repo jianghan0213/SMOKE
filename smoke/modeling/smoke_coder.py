@@ -5,7 +5,7 @@ import torch
 PI = 3.14159
 
 
-def encode_label(K, ry, dims, locs):
+def encode_label(P, ry, dims, locs):
     l, h, w = dims[0], dims[1], dims[2]
     x, y, z = locs[0], locs[1], locs[2]
 
@@ -24,11 +24,14 @@ def encode_label(K, ry, dims, locs):
     corners_3d = np.matmul(rot_mat, corners_3d)
     corners_3d += np.array([x, y, z]).reshape([3, 1])
 
-    loc_center = np.array([x, y - h / 2, z])
-    proj_point = np.matmul(K, loc_center)
+    loc_center = np.array([x, y - h / 2, z, 1.0])
+    proj_point = np.matmul(P, loc_center)
     proj_point = proj_point[:2] / proj_point[2]
 
-    corners_2d = np.matmul(K, corners_3d)
+    corners_3d_extend = corners_3d.transpose(1, 0)
+    corners_3d_extend = np.concatenate(
+        [corners_3d_extend, np.ones((corners_3d_extend.shape[0], 1), dtype=np.float32)], axis=1)    
+    corners_2d = np.matmul(P, corners_3d_extend.transpose(1, 0))
     corners_2d = corners_2d[:2] / corners_2d[2]
     box2d = np.array([min(corners_2d[0]), min(corners_2d[1]),
                       max(corners_2d[0]), max(corners_2d[1])])
@@ -41,14 +44,13 @@ class SMOKECoder():
         self.depth_ref = torch.as_tensor(depth_ref).to(device=device)
         self.dim_ref = torch.as_tensor(dim_ref).to(device=device)
 
-    def encode_box2d(self, K, rotys, dims, locs, img_size):
+    def encode_box2d(self, P, rotys, dims, locs, img_size):
         device = rotys.device
-        K = K.to(device=device)
-
+        P = P.to(device=device)
         img_size = img_size.flatten()
-
         box3d = self.encode_box3d(rotys, dims, locs)
-        box3d_image = torch.matmul(K, box3d)
+        box3d_extend = torch.cat((box3d, torch.ones((box3d.shape[0], 1, 8), device=device)), dim=1)
+        box3d_image = torch.matmul(P, box3d_extend)
         box3d_image = box3d_image[:, :2, :] / box3d_image[:, 2, :].view(
             box3d.shape[0], 1, box3d.shape[2]
         )
@@ -134,7 +136,7 @@ class SMOKECoder():
                         points,
                         points_offset,
                         depths,
-                        Ks,
+                        Ps,
                         trans_mats):
         '''
         retrieve objects location in camera coordinate based on projected points
@@ -142,7 +144,7 @@ class SMOKECoder():
             points: projected points on feature map in (x, y)
             points_offset: project points offset in (delata_x, delta_y)
             depths: object depth z
-            Ks: camera intrinsic matrix, shape = [N, 3, 3]
+            Ps: camera intrinsic matrix, shape = [N, 4, 4]
             trans_mats: transformation matrix from image to feature map, shape = [N, 3, 3]
 
         Returns:
@@ -150,18 +152,18 @@ class SMOKECoder():
         '''
         device = points.device
 
-        Ks = Ks.to(device=device)
+        Ps = Ps.to(device=device)
         trans_mats = trans_mats.to(device=device)
 
         # number of points
         N = points_offset.shape[0]
         # batch size
-        N_batch = Ks.shape[0]
+        N_batch = Ps.shape[0]
         batch_id = torch.arange(N_batch).unsqueeze(1)
         obj_id = batch_id.repeat(1, N // N_batch).flatten()
 
         trans_mats_inv = trans_mats.inverse()[obj_id]
-        Ks_inv = Ks.inverse()[obj_id]
+        Ps_inv = Ps.inverse()[obj_id]
 
         points = points.view(-1, 2)
         assert points.shape[0] == N
@@ -175,8 +177,10 @@ class SMOKECoder():
         proj_points_img = torch.matmul(trans_mats_inv, proj_points_extend)
         # with depth
         proj_points_img = proj_points_img * depths.view(N, -1, 1)
+        proj_points_img = torch.cat((proj_points_img, torch.ones((N, 1, 1), device=device)), dim=1)
         # transform image coordinates back to object locations
-        locations = torch.matmul(Ks_inv, proj_points_img)
+        locations = torch.matmul(Ps_inv, proj_points_img)
+        locations = locations[:, :3, :]
 
         return locations.squeeze(2)
 

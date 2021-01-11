@@ -35,6 +35,14 @@ def affine_transform(point, matrix):
     return new_point[:2]
 
 
+def batch_affine_transform(point, matrix):
+    point_exd = np.stack([point[:, 0], point[:, 1], np.ones(8)], axis=-1)
+    new_point = np.matmul(matrix, point_exd.T)
+    new_point = new_point.T
+
+    return new_point[:, :2]
+
+
 def get_3rd_point(point_a, point_b):
     d = point_a - point_b
     point_c = point_b + np.array([-d[1], d[0]])

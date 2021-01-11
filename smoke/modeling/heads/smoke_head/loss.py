@@ -40,7 +40,7 @@ class SMOKELossComputation():
         locations = torch.stack([t.get_field("locations") for t in targets])
         rotys = torch.stack([t.get_field("rotys") for t in targets])
         trans_mat = torch.stack([t.get_field("trans_mat") for t in targets])
-        K = torch.stack([t.get_field("K") for t in targets])
+        P = torch.stack([t.get_field("P") for t in targets])
         reg_mask = torch.stack([t.get_field("reg_mask") for t in targets])
         flip_mask = torch.stack([t.get_field("flip_mask") for t in targets])
 
@@ -50,7 +50,7 @@ class SMOKELossComputation():
                                           locations=locations,
                                           rotys=rotys,
                                           trans_mat=trans_mat,
-                                          K=K,
+                                          P=P,
                                           reg_mask=reg_mask,
                                           flip_mask=flip_mask)
 
@@ -73,7 +73,7 @@ class SMOKELossComputation():
             targets_proj_points,
             pred_proj_offsets,
             pred_depths,
-            targets_variables["K"],
+            targets_variables["P"],
             targets_variables["trans_mat"]
         )
         pred_dimensions = self.smoke_coder.decode_dimension(
