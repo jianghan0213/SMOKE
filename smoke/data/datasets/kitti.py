@@ -7,6 +7,7 @@ from PIL import Image
 import cv2
 
 from torch.utils.data import Dataset
+from .utils import color_aug
 
 from smoke.modeling.heatmap_coder import (
     get_transfrom_matrix,
@@ -40,6 +41,12 @@ class KITTIDataset(Dataset):
         self.is_train = is_train
         self.transforms = transforms
 
+        self._data_rng = np.random.RandomState(123)
+        self._eig_val = np.array([0.2141788, 0.01817699, 0.00341571], dtype=np.float32)
+        self._eig_vec = np.array([[-0.58752847, -0.69563484, 0.41340352],
+                                  [-0.5832747, 0.00994535, -0.81221408],
+                                  [-0.56089297, 0.71832671, 0.41158938]], dtype=np.float32)
+
         if self.split == "train":
             imageset_txt = os.path.join(root, "ImageSets", "train.txt")
         elif self.split == "val":
@@ -62,8 +69,10 @@ class KITTIDataset(Dataset):
         self.classes = cfg.DATASETS.DETECT_CLASSES
 
         self.flip_prob = cfg.INPUT.FLIP_PROB_TRAIN if is_train else 0
-        self.aug_prob = cfg.INPUT.SHIFT_SCALE_PROB_TRAIN if is_train else 0
-        self.right_prob = cfg.INPUT.USE_RIGHT_PROB_TRAIN
+        self.scale_aug_prob = cfg.INPUT.SHIFT_SCALE_PROB_TRAIN if is_train else 0
+        self.color_aug_prob = cfg.INPUT.USE_COLOR_PROB_TRAIN if is_train else 0
+        self.right_prob = cfg.INPUT.USE_RIGHT_PROB_TRAIN if is_train else 0
+
         self.shift_scale = cfg.INPUT.SHIFT_SCALE_TRAIN
         self.num_classes = len(self.classes)
 
@@ -87,7 +96,9 @@ class KITTIDataset(Dataset):
         resize, horizontal flip, and affine augmentation are performed here.
         since it is complicated to compute heatmap w.r.t transform.
         """
+        use_left = True
         if (self.is_train) and (random.random() < self.right_prob):
+            use_left = False
             K = P3[:3, :3]
             P = P3
             img_path = os.path.join(self.image3_dir, self.image_files[idx])
@@ -95,20 +106,20 @@ class KITTIDataset(Dataset):
             K = P2[:3, :3]
             P = P2
             img_path = os.path.join(self.image_dir, self.image_files[idx])
-        
+        '''
         img = Image.open(img_path)
         center = np.array([i / 2 for i in img.size], dtype=np.float32)
         size = np.array([i for i in img.size], dtype=np.float32)
-
+        '''
         flipped = False
-        if (self.is_train) and (random.random() < self.flip_prob):
+        if (self.is_train) and (random.random() < self.flip_prob) and (use_left):
             flipped = True
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
             center[0] = size[0] - center[0] - 1
             P[0, 2] = size[0] - P[0, 2] - 1
 
         affine = False
-        if (self.is_train) and (random.random() < self.aug_prob):
+        if (self.is_train) and (random.random() < self.scale_aug_prob):
             affine = True
             shift, scale = self.shift_scale[0], self.shift_scale[1]
             shift_ranges = np.arange(-shift, shift + 0.1, 0.1)
@@ -130,6 +141,8 @@ class KITTIDataset(Dataset):
             data=trans_affine_inv.flatten()[:6],
             resample=Image.BILINEAR,
         )
+        if (self.is_train) and (random.random() < self.color_aug_prob):
+            color_aug(self._data_rng, img, self._eig_val, self._eig_vec)
 
         image = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
         shape = (int(image.shape[1] / 4), int(image.shape[0] / 4))
@@ -183,7 +196,7 @@ class KITTIDataset(Dataset):
             box2d[[0, 2]] = box2d[[0, 2]].clip(0, self.output_width - 1)
             box2d[[1, 3]] = box2d[[1, 3]].clip(0, self.output_height - 1)
             h, w = box2d[3] - box2d[1], box2d[2] - box2d[0]
-            
+            '''
             vertexes_3d = compute_box_3d(dims, locs, rot_y)
             vertexes_2d = project_to_image(vertexes_3d, P)
             vertexes_2d = batch_affine_transform(vertexes_2d, trans_mat)
@@ -207,7 +220,7 @@ class KITTIDataset(Dataset):
                  3, (255,0,0),-1)
             cv2.circle(image, (int(center1[0]), int(center1[1])),
                  3, (0,0,255),-1)
-            
+            '''
             if (0 < point[0] < self.output_width) and (0 < point[1] < self.output_height):
                 point_int = point.astype(np.int32)
                 p_offset = point - point_int
@@ -224,9 +237,9 @@ class KITTIDataset(Dataset):
                 rotys[i] = rot_y
                 reg_mask[i] = 1 if not affine else 0
                 flip_mask[i] = 1 if not affine and flipped else 0
-
+        '''
         cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + ".jpg"), image)
-
+        '''
         P = np.concatenate((P, np.ones((1, 4), dtype=np.float32)), axis=0)
         P[3, :3] = 0
 

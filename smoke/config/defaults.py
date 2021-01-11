@@ -38,6 +38,8 @@ _C.INPUT.SHIFT_SCALE_PROB_TRAIN = 0.3
 _C.INPUT.SHIFT_SCALE_TRAIN = (0.2, 0.4)
 # Use right camera probability
 _C.INPUT.USE_RIGHT_PROB_TRAIN = 0.5
+# Use color transform probability
+_C.INPUT.USE_COLOR_PROB_TRAIN = 0.5
 
 # -----------------------------------------------------------------------------
 # Dataset
@@ -59,7 +61,7 @@ _C.DATASETS.MAX_OBJECTS = 30
 # -----------------------------------------------------------------------------
 _C.DATALOADER = CN()
 # Number of data loading threads
-_C.DATALOADER.NUM_WORKERS = 0
+_C.DATALOADER.NUM_WORKERS = 4
 # If > 0, this enforces that each collated batch should have a size divisible
 # by SIZE_DIVISIBILITY
 _C.DATALOADER.SIZE_DIVISIBILITY = 0
