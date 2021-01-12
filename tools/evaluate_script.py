@@ -18,7 +18,9 @@ from smoke.utils import comm
 from smoke.modeling.detector import build_detection_model
 from smoke.engine.test_net import run_test
 
-from tools.pykitti_eval.kitti_eval import evaluate_kitti_mAP
+from tools.evaluation.kitti_utils.eval import kitti_eval
+from tools.evaluation.kitti_utils import kitti_common as kitti
+
 from tools.visualizer.kitti_visual_tool import kitti_visual_tool_api
 
 import cv2
@@ -102,21 +104,18 @@ def main(args):
         
         gt_label_path = "datasets/kitti/training/label_2/"
         pred_label_path = os.path.join(checkpoints_path, "inference", "kitti_train", "data")
-        result_dict = evaluate_kitti_mAP(gt_label_path, pred_label_path, ["Car", "Pedestrian", "Cyclist"])
-        
-        if result_dict is not None:
-            mAP_3d_moderate = result_dict["mAP3d"][1]
+
+        pred_annos, image_ids = kitti.get_label_annos(pred_label_path, return_ids=True)
+        gt_annos = kitti.get_label_annos(gt_label_path, image_ids=image_ids)
+        result, ret_dict = kitti_eval(gt_annos, pred_annos, ["Car", "Pedestrian", "Cyclist"])
+
+        if ret_dict is not None:
+            mAP_3d_moderate = ret_dict["KITTI/Car_3D_moderate_strict"]
             val_mAP.append(mAP_3d_moderate)
             with open(os.path.join(checkpoints_path, "val_mAP.json"),'w') as file_object:
                 json.dump(val_mAP, file_object)
             with open(os.path.join(checkpoints_path, 'epoch_result_{:07d}_{}.txt'.format(iteration, round(mAP_3d_moderate, 2))), "w") as f:
-                f.write(result_dict["result"])
-            print(result_dict["result"])
-
-        if iteration > 5000:
-            kitti_root = "datasets/kitti"
-            checkpoints_name = model_name.split('.')[0]
-            pred_visualization(kitti_root, checkpoints_name, cfg.OUTPUT_DIR, "visual")
+                f.write(result)
 
 if __name__ == '__main__':
     args = default_argument_parser().parse_args()
