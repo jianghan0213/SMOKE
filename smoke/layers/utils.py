@@ -91,10 +91,12 @@ def select_point_of_interest(batch, index, feature_maps):
     Returns:
 
     '''
-    w = feature_maps.shape[3]
+    h, w = feature_maps.shape[3]
     if len(index.shape) == 3:
         index = index[:, :, 1] * w + index[:, :, 0]
     index = index.view(batch, -1)
+    index_max = h * w
+    index = torch.clamp(index, 0, index_max - 1)
     # [N, C, H, W] -----> [N, H, W, C]
     feature_maps = feature_maps.permute(0, 2, 3, 1).contiguous()
     channel = feature_maps.shape[-1]
