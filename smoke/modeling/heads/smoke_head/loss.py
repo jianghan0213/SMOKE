@@ -6,7 +6,7 @@ from smoke.modeling.smoke_coder import SMOKECoder
 from smoke.layers.focal_loss import FocalLoss
 from smoke.layers.utils import select_point_of_interest
 
-# from smoke.utils.bbox.iou_calculators.iou3d_calculator import BboxOverlaps3D
+from mmdet3d.core.bbox.iou_calculators.iou3d_calculator import BboxOverlaps3D
 
 class SMOKELossComputation():
     def __init__(self,
@@ -20,7 +20,7 @@ class SMOKELossComputation():
         self.reg_loss = reg_loss
         self.loss_weight = loss_weight
         self.max_objs = max_objs
-        # self.iou_calculator = BboxOverlaps3D(coordinate="camera")
+        self.iou_calculator = BboxOverlaps3D(coordinate="camera")
 
 
     def l1_loss(self, inputs, targets, weight, reduction="sum"):
@@ -40,7 +40,7 @@ class SMOKELossComputation():
         locations = torch.stack([t.get_field("locations") for t in targets])
         rotys = torch.stack([t.get_field("rotys") for t in targets])
         trans_mat = torch.stack([t.get_field("trans_mat") for t in targets])
-        K = torch.stack([t.get_field("K") for t in targets])
+        P = torch.stack([t.get_field("P") for t in targets])
         reg_mask = torch.stack([t.get_field("reg_mask") for t in targets])
         flip_mask = torch.stack([t.get_field("flip_mask") for t in targets])
 
@@ -50,7 +50,7 @@ class SMOKELossComputation():
                                           locations=locations,
                                           rotys=rotys,
                                           trans_mat=trans_mat,
-                                          K=K,
+                                          P=P,
                                           reg_mask=reg_mask,
                                           flip_mask=flip_mask)
 
@@ -73,7 +73,7 @@ class SMOKELossComputation():
             targets_proj_points,
             pred_proj_offsets,
             pred_depths,
-            targets_variables["K"],
+            targets_variables["P"],
             targets_variables["trans_mat"]
         )
         pred_dimensions = self.smoke_coder.decode_dimension(
@@ -146,9 +146,9 @@ class SMOKELossComputation():
         pred_dimentions = pred_dimentions[:, [1, 2, 0]] # lhw -> hwl
         pred_boxes = torch.cat((pred_locations, pred_dimentions, pred_rotys), dim=-1)
 
-        # bbox_ious_3d = self.iou_calculator(gt_boxes, pred_boxes, "iou")
-        # nums_boxes = bbox_ious_3d.shape[0]
-        # bbox_ious_3d = bbox_ious_3d[range(nums_boxes), range(nums_boxes)].view(-1, 1)  # [240,]
+        bbox_ious_3d = self.iou_calculator(gt_boxes, pred_boxes, "iou")
+        nums_boxes = bbox_ious_3d.shape[0]
+        bbox_ious_3d = bbox_ious_3d[range(nums_boxes), range(nums_boxes)].view(-1, 1)  # [240,]
 
         targets_regression = targets_regression.view(
             -1, targets_regression.shape[2], targets_regression.shape[3]
@@ -156,8 +156,7 @@ class SMOKELossComputation():
 
         reg_mask = targets_variables["reg_mask"].flatten()
         num_objs = torch.sum(reg_mask)
-        # reg_weight = cls_scores * (1 - bbox_ious_3d)**2
-        reg_weight = cls_scores
+        reg_weight = 2 * cls_scores + (1 - bbox_ious_3d)
         reg_weight_masked = reg_weight[reg_mask.bool()]
         reg_weight_masked = F.softmax(reg_weight_masked, dim=0) * num_objs
         reg_weight[reg_mask.bool()] = reg_weight_masked
