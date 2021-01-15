@@ -91,7 +91,7 @@ def select_point_of_interest(batch, index, feature_maps):
     Returns:
 
     '''
-    h, w = feature_maps.shape[3]
+    h, w = feature_maps.shape[2], feature_maps.shape[3]
     if len(index.shape) == 3:
         index = index[:, :, 1] * w + index[:, :, 0]
     index = index.view(batch, -1)

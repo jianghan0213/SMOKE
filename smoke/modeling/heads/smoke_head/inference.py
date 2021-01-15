@@ -25,11 +25,11 @@ class PostProcessor(nn.Module):
 
     def prepare_targets(self, targets):
         trans_mat = torch.stack([t.get_field("trans_mat") for t in targets])
-        K = torch.stack([t.get_field("K") for t in targets])
+        P = torch.stack([t.get_field("P") for t in targets])
         size = torch.stack([torch.tensor(t.size) for t in targets])
 
         return dict(trans_mat=trans_mat,
-                    K=K,
+                    P=P,
                     size=size)
 
     def forward(self, predictions, targets):
@@ -53,7 +53,7 @@ class PostProcessor(nn.Module):
             pred_proj_points,
             pred_proj_offsets,
             pred_depths,
-            target_varibales["K"],
+            target_varibales["P"],
             target_varibales["trans_mat"]
         )
         pred_dimensions = self.smoke_coder.decode_dimension(
@@ -70,7 +70,7 @@ class PostProcessor(nn.Module):
 
         if self.pred_2d:
             box2d = self.smoke_coder.encode_box2d(
-                target_varibales["K"],
+                target_varibales["P"],
                 pred_rotys,
                 pred_dimensions,
                 pred_locations,
