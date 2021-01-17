@@ -155,9 +155,10 @@ class SMOKELossComputation():
         )
 
         reg_mask = targets_variables["reg_mask"].flatten()
-        reg_weight = cls_scores * (1 - bbox_ious_3d)**2
+        num_objs = torch.sum(reg_mask)
+        reg_weight = 2 * cls_scores + (1 - bbox_ious_3d)
         reg_weight_masked = reg_weight[reg_mask.bool()]
-        reg_weight_masked = F.softmax(reg_weight_masked, dim=0) + 1.0
+        reg_weight_masked = F.softmax(reg_weight_masked, dim=0) * num_objs
         reg_weight[reg_mask.bool()] = reg_weight_masked
         reg_weight = reg_weight.view(-1, 1, 1)
         reg_weight = reg_weight.expand_as(targets_regression)

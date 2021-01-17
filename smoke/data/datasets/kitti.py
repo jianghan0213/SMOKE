@@ -7,7 +7,7 @@ from PIL import Image
 import cv2
 
 from torch.utils.data import Dataset
-from .utils import color_aug
+#from .utils import color_aug
 
 from smoke.modeling.heatmap_coder import (
     get_transfrom_matrix,
@@ -106,11 +106,11 @@ class KITTIDataset(Dataset):
             K = P2[:3, :3]
             P = P2
             img_path = os.path.join(self.image_dir, self.image_files[idx])
-        '''
+        
         img = Image.open(img_path)
         center = np.array([i / 2 for i in img.size], dtype=np.float32)
         size = np.array([i for i in img.size], dtype=np.float32)
-        '''
+        
         flipped = False
         if (self.is_train) and (random.random() < self.flip_prob) and (use_left):
             flipped = True
@@ -142,11 +142,13 @@ class KITTIDataset(Dataset):
             resample=Image.BILINEAR,
         )
         if (self.is_train) and (random.random() < self.color_aug_prob):
-            color_aug(self._data_rng, img, self._eig_val, self._eig_vec)
-
+            #color_aug(self._data_rng, img, self._eig_val, self._eig_vec)
+            print("TODO ...")
+        '''
         image = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
         shape = (int(image.shape[1] / 4), int(image.shape[0] / 4))
         image = cv2.resize(image, shape, interpolation = cv2.INTER_AREA)
+        '''
         trans_mat = get_transfrom_matrix(
             center_size,
             [self.output_width, self.output_height]
@@ -184,7 +186,7 @@ class KITTIDataset(Dataset):
             rot_y = np.array(a["rot_y"])
             if flipped:
                 locs[0] *= -1
-                rot_y = np.sign(rot_y) * np.pi - rot_y
+                rot_y *= -1
 
             point, box2d, box3d = encode_label(
                 P, rot_y, dims, locs
