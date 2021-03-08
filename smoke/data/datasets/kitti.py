@@ -166,6 +166,10 @@ class KITTIDataset(Dataset):
         reg_mask = np.zeros([self.max_objs], dtype=np.uint8)
         flip_mask = np.zeros([self.max_objs], dtype=np.uint8)
 
+        regression_2d = np.zeros([self.max_objs, 4], dtype=np.float32)
+        p_2d_offsets = np.zeros([self.max_objs, 2], dtype=np.float32)
+        p_2d_whs = np.zeros([self.max_objs, 2], dtype=np.float32)
+
         for i, a in enumerate(anns):
             a = a.copy()
             cls = a["label"]
@@ -185,11 +189,12 @@ class KITTIDataset(Dataset):
             box2d[[0, 2]] = box2d[[0, 2]].clip(0, self.output_width - 1)
             box2d[[1, 3]] = box2d[[1, 3]].clip(0, self.output_height - 1)
             h, w = box2d[3] - box2d[1], box2d[2] - box2d[0]
+            center_2d = np.array([box2d[0] + box2d[2], box2d[1] + box2d[3]]) * 0.5 
             
             '''
             cv2.circle(image, (int(point[0]), int(point[1])), 3, (255,0,0),-1)
             '''
-            if (0 < point[0] < self.output_width) and (0 < point[1] < self.output_height):
+            if (0 < point[0] < self.output_width) and (0 < point[1] < self.output_height) and int(a['occlusion']) != 2:
                 point_int = point.astype(np.int32)
                 p_offset = point - point_int
                 radius = gaussian_radius(h, w)
@@ -205,6 +210,10 @@ class KITTIDataset(Dataset):
                 rotys[i] = rot_y
                 reg_mask[i] = 1 if not affine else 0
                 flip_mask[i] = 1 if not affine and flipped else 0
+
+                regression_2d[i] = box2d
+                p_2d_offsets[i] = center_2d - point_int
+                p_2d_whs[i] = np.array([w, h])
 
         '''
         cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + ".jpg"), image)
@@ -224,6 +233,10 @@ class KITTIDataset(Dataset):
         target.add_field("P", P)
         target.add_field("reg_mask", reg_mask)
         target.add_field("flip_mask", flip_mask)
+
+        target.add_field("reg_2d", regression_2d)
+        target.add_field("p_2d_offsets", p_2d_offsets)
+        target.add_field("p_2d_whs", p_2d_whs)
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)

@@ -31,9 +31,9 @@ def train(cfg, args, model, device, distributed):
         cfg, model, optimizer, scheduler, output_dir, save_to_disk
     )
     
-    if cfg.MODEL.BACKBONE.CONV_BODY is "DLA-34-DCN":
+    if cfg.MODEL.BACKBONE.CONV_BODY == "DLA-34-DCN":
         ckpt = cfg.MODEL.WEIGHT if args.ckpt is None else args.ckpt
-        extra_checkpoint_data = checkpointer.load(ckpt)
+        extra_checkpoint_data = checkpointer.load(ckpt, use_latest=False)
         arguments.update(extra_checkpoint_data)
     elif args.ckpt is not None:
         extra_checkpoint_data = checkpointer.load(args.ckpt)
