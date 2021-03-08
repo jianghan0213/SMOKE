@@ -33,10 +33,18 @@ class PostProcessor(nn.Module):
                     size=size)
 
     def forward(self, predictions, targets):
-        pred_regression, scores, clses, ys, xs = \
-            predictions[0], predictions[1], predictions[2], predictions[3], predictions[4]
+        pred_regression, scores, clses, ys, xs, pred_2d_regression = \
+            predictions[0], predictions[1], predictions[2], predictions[3], predictions[4], predictions[5]
 
         target_varibales = self.prepare_targets(targets)
+
+        # [N, K, 4]
+        pred_2d_regression = pred_2d_regression.permute(0, 2, 1).contiguous()
+        # 2d box
+        pred_2d_regression_pois = pred_2d_regression.view(-1, 4)
+        pred_2d_center_offsets = pred_2d_regression_pois[:, :2]
+        pred_2d_whs = pred_2d_regression_pois[:, 2:]
+
         # [N, K, 8]
         pred_regression = pred_regression.permute(0, 2, 1).contiguous()
         pred_regression_pois = pred_regression.view(-1, self.reg_head)
@@ -69,13 +77,32 @@ class PostProcessor(nn.Module):
         )
 
         if self.pred_2d:
-            box2d = self.smoke_coder.encode_box2d(
-                target_varibales["P"],
-                pred_rotys,
-                pred_dimensions,
-                pred_locations,
-                target_varibales["size"]
-            )
+            if False:
+                box2d = self.smoke_coder.encode_2dbox(
+                    pred_proj_points,
+                    pred_2d_center_offsets,
+                    pred_2d_whs
+                )
+                N = pred_2d_center_offsets.shape[0]
+                batch_id = torch.arange(8).unsqueeze(1)
+                obj_id = batch_id.repeat(1, N // 8).flatten()
+                device = pred_proj_points.device
+                trans_mats_inv = target_varibales["trans_mat"].inverse()[obj_id].to(device=device)
+                l_corners_extend = torch.cat((box2d[:, :2], torch.ones(N, 1).to(device=device)), dim=1)
+                r_corners_extend = torch.cat((box2d[:, 2:], torch.ones(N, 1).to(device=device)), dim=1)
+                l_corners_extend = l_corners_extend.unsqueeze(-1)
+                r_corners_extend = r_corners_extend.unsqueeze(-1)
+                proj_l_corners = torch.matmul(trans_mats_inv, l_corners_extend).squeeze(2)
+                proj_r_corners = torch.matmul(trans_mats_inv, r_corners_extend).squeeze(2)
+                box2d = torch.cat((proj_l_corners[:, :2], proj_r_corners[:, :2]), dim=1)
+            else:
+                box2d = self.smoke_coder.encode_box2d(
+                    target_varibales["P"],
+                    pred_rotys,
+                    pred_dimensions,
+                    pred_locations,
+                    target_varibales["size"]
+                )
         else:
             box2d = torch.tensor([0, 0, 0, 0])
 

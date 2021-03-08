@@ -111,7 +111,7 @@ _C.MODEL.SMOKE_HEAD.REGRESSION_CHANNEL = (1, 2, 3, 2)
 _C.MODEL.SMOKE_HEAD.USE_NORMALIZATION = "GN"
 _C.MODEL.SMOKE_HEAD.NUM_CHANNEL = 256
 # Loss weight for hm and reg loss
-_C.MODEL.SMOKE_HEAD.LOSS_WEIGHT = (1., 10.)
+_C.MODEL.SMOKE_HEAD.LOSS_WEIGHT = (1., 10., 100.)
 # Reference car size in (length, height, width)
 # for (car, cyclist, pedestrian)
 _C.MODEL.SMOKE_HEAD.DIMENSION_REFERENCE = ((3.88, 1.63, 1.53),

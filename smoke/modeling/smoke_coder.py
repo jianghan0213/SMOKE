@@ -251,6 +251,19 @@ class SMOKECoder():
         else:
             return rotys, alphas
 
+    def encode_2dbox(self, points, points_offset, whs):
+        points = points.view(-1, 2)
+        points_offset = points_offset.view(-1, 2)
+        whs = whs.view(-1, 2)
+
+        N = points_offset.shape[0]
+        assert points.shape[0] == N
+        proj_points = points + points_offset
+        proj_points_lc = proj_points - 0.5 * whs
+        proj_points_rc = proj_points + 0.5 * whs
+        bbox2d = torch.cat((proj_points_lc, proj_points_rc), dim=1)
+        return bbox2d
+
 
 if __name__ == '__main__':
     sc = SMOKECoder(depth_ref=(28.01, 16.32),

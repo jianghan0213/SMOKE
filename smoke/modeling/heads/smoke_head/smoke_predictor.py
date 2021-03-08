@@ -83,19 +83,36 @@ class SMOKEPredictor(nn.Module):
         )
         _fill_fc_weights(self.regression_head)
 
+        self.regression_2d_head = nn.Sequential(
+            nn.Conv2d(in_channels,
+                      head_conv,
+                      kernel_size=3,
+                      padding=1,
+                      bias=True),
+
+            nn.BatchNorm2d(head_conv),
+
+            nn.ReLU(inplace=True),
+        )
+        _fill_fc_weights(self.regression_2d_head)
+
         self.reg_3dbox = nn.Conv2d(640, regression, kernel_size=1, padding=1 // 2, bias=True)
+        self.reg_2dbox = nn.Conv2d(640, 4, kernel_size=1, padding=1 // 2, bias=True)
+
         _fill_fc_weights(self.reg_3dbox)
+        _fill_fc_weights(self.reg_2dbox)
 
     def forward(self, features, targets=None):
         up_level16, up_level8, up_level4 = features[0], features[1], features[2]
 
         head_class = self.class_head(up_level4)
         head_regression = self.regression_head(up_level4)
+        head_2d_regression = self.regression_2d_head(up_level4)
 
         head_class = sigmoid_hm(head_class)
         batch = head_class.shape[0]
         if self.training:
-            targets_heatmap, targets_regression, targets_variables = self.loss_evaluator.prepare_targets(targets)
+            targets_heatmap, targets_regression, targets_2d_regression, targets_variables = self.loss_evaluator.prepare_targets(targets)
             proj_points = targets_variables["proj_points"]
         if not self.training:
             head_class_nms = nms_hm(head_class)
@@ -110,17 +127,23 @@ class SMOKEPredictor(nn.Module):
 
         # 1/4 [N, K, 256]
         regression_pois = select_point_of_interest(batch, proj_points, head_regression)
+        regression_2d_pois = select_point_of_interest(batch, proj_points, head_2d_regression)
+
         # 1/8 [N, K, 128]
         up_level8_pois = select_point_of_interest(batch, proj_points_8, up_level8)
         # 1/16 [N, K, 256]
         up_level16_pois = select_point_of_interest(batch, proj_points_16, up_level16)
         # [N, K, 640]
         regression_pois = torch.cat((regression_pois, up_level8_pois, up_level16_pois), dim=-1)
+        regression_2d_pois = torch.cat((regression_2d_pois, up_level8_pois, up_level16_pois), dim=-1)
 
         # [N, 640, K, 1]
         regression_pois = regression_pois.permute(0, 2, 1).contiguous().unsqueeze(-1)
+        regression_2d_pois = regression_2d_pois.permute(0, 2, 1).contiguous().unsqueeze(-1)
+
         # [N, 8, K, 1]
         head_regression = self.reg_3dbox(regression_pois)
+        head_2d_regression = self.reg_2dbox(regression_2d_pois)
 
         # (N, C, H, W)
         offset_dims = head_regression[:, self.dim_channel, ...].clone()
@@ -130,11 +153,12 @@ class SMOKEPredictor(nn.Module):
 
         # [N, 8, K]
         head_regression = head_regression.squeeze(-1)
+        head_2d_regression = head_2d_regression.squeeze(-1)
         if self.training:
             return [head_class, head_regression, targets_heatmap, \
-                targets_regression, targets_variables]
+                targets_regression, targets_variables, head_2d_regression, targets_2d_regression]
         if not self.training:
-            return [head_regression, scores, clses, ys, xs]
+            return [head_regression, scores, clses, ys, xs, head_2d_regression]
 
 def make_smoke_predictor(cfg, in_channels):
     func = registry.SMOKE_PREDICTOR[
