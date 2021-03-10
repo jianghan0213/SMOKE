@@ -70,6 +70,25 @@ class SMOKEPredictor(nn.Module):
         # todo: what is datafill here
         self.class_head[-1].bias.data.fill_(-2.19)
 
+        self.corners_head = nn.Sequential(
+            nn.Conv2d(in_channels,
+                      head_conv,
+                      kernel_size=3,
+                      padding=1,
+                      bias=True),
+
+            norm_func(head_conv),
+
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(head_conv,
+                      8,
+                      kernel_size=1,
+                      padding=1 // 2,
+                      bias=True)
+        )
+        self.corners_head[-1].bias.data.fill_(-2.19)
+
         self.regression_head = nn.Sequential(
             nn.Conv2d(in_channels,
                       head_conv,
@@ -106,13 +125,15 @@ class SMOKEPredictor(nn.Module):
         up_level16, up_level8, up_level4 = features[0], features[1], features[2]
 
         head_class = self.class_head(up_level4)
+        head_corners = self.corners_head(up_level4)
         head_regression = self.regression_head(up_level4)
         head_2d_regression = self.regression_2d_head(up_level4)
 
         head_class = sigmoid_hm(head_class)
+        head_corners = sigmoid_hm(head_corners)
         batch = head_class.shape[0]
         if self.training:
-            targets_heatmap, targets_regression, targets_2d_regression, targets_variables = self.loss_evaluator.prepare_targets(targets)
+            targets_heatmap, targets_regression, targets_2d_regression, targets_hm_corners, targets_variables = self.loss_evaluator.prepare_targets(targets)
             proj_points = targets_variables["proj_points"]
         if not self.training:
             head_class_nms = nms_hm(head_class)
@@ -156,7 +177,7 @@ class SMOKEPredictor(nn.Module):
         head_2d_regression = head_2d_regression.squeeze(-1)
         if self.training:
             return [head_class, head_regression, targets_heatmap, \
-                targets_regression, targets_variables, head_2d_regression, targets_2d_regression]
+                targets_regression, targets_variables, head_2d_regression, targets_2d_regression, targets_hm_corners, head_corners]
         if not self.training:
             return [head_regression, scores, clses, ys, xs, head_2d_regression]
 

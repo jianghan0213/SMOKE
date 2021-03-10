@@ -35,7 +35,7 @@ def encode_label(P, ry, dims, locs):
     box2d = np.array([min(corners_2d[0]), min(corners_2d[1]),
                       max(corners_2d[0]), max(corners_2d[1])])
 
-    return proj_point, box2d, corners_3d
+    return proj_point, box2d, corners_3d, corners_2d
 
 
 class SMOKECoder():

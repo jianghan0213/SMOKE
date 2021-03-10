@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 from smoke.modeling.heatmap_coder import (
     get_transfrom_matrix,
     affine_transform,
+    batch_affine_transform,
     gaussian_radius,
     draw_umich_gaussian,
 )
@@ -64,6 +65,7 @@ class KITTIDataset(Dataset):
         self.right_prob = cfg.INPUT.USE_RIGHT_PROB_TRAIN if is_train else 0
 
         self.num_classes = len(self.classes)
+        self.num_corners = 8
 
         self.input_width = cfg.INPUT.WIDTH_TRAIN
         self.input_height = cfg.INPUT.HEIGHT_TRAIN
@@ -156,6 +158,8 @@ class KITTIDataset(Dataset):
             return img, target, original_idx
 
         heat_map = np.zeros([self.num_classes, self.output_height, self.output_width], dtype=np.float32)
+        hm_corners = np.zeros((self.num_corners, self.output_height, self.output_width), dtype=np.float32)
+
         regression = np.zeros([self.max_objs, 3, 8], dtype=np.float32)
         cls_ids = np.zeros([self.max_objs], dtype=np.int32)
         proj_points = np.zeros([self.max_objs, 2], dtype=np.int32)
@@ -180,17 +184,20 @@ class KITTIDataset(Dataset):
                 locs[0] *= -1
                 rot_y *= -1
 
-            point, box2d, box3d = encode_label(
+            point, box2d, box3d, corners_2d = encode_label(
                 P, rot_y, a["dimensions"], locs
             )
+            corners_2d = corners_2d.T
+
             point = affine_transform(point, trans_mat)
             box2d[:2] = affine_transform(box2d[:2], trans_mat)
             box2d[2:] = affine_transform(box2d[2:], trans_mat)
+            corners_2d = batch_affine_transform(corners_2d, trans_mat)
+
             box2d[[0, 2]] = box2d[[0, 2]].clip(0, self.output_width - 1)
             box2d[[1, 3]] = box2d[[1, 3]].clip(0, self.output_height - 1)
             h, w = box2d[3] - box2d[1], box2d[2] - box2d[0]
             center_2d = np.array([box2d[0] + box2d[2], box2d[1] + box2d[3]]) * 0.5 
-            
             '''
             cv2.circle(image, (int(point[0]), int(point[1])), 3, (255,0,0),-1)
             '''
@@ -215,14 +222,22 @@ class KITTIDataset(Dataset):
                 p_2d_offsets[i] = center_2d - point_int
                 p_2d_whs[i] = np.array([w, h])
 
+                for corner_idx, corner in enumerate(corners_2d):
+                    corner_int = corner.astype(np.int32)
+                    if (0 <= corner_int[0] < self.output_width) and (0 <= corner_int[1] < self.output_height):
+                        hm_corners[corner_idx] = draw_umich_gaussian(hm_corners[corner_idx], corner_int, radius)
+
         '''
         cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + ".jpg"), image)
         '''
+
         P = np.concatenate((P, np.ones((1, 4), dtype=np.float32)), axis=0)
         P[3, :3] = 0
         target = ParamsList(image_size=img.size,
                             is_train=self.is_train)
         target.add_field("hm", heat_map)
+        target.add_field("hm_corners", hm_corners)
+
         target.add_field("reg", regression)
         target.add_field("cls_ids", cls_ids)
         target.add_field("proj_p", proj_points)
@@ -280,3 +295,4 @@ class KITTIDataset(Dataset):
                     P3 = np.array(P3, dtype=np.float32).reshape(3, 4)
                     break
         return annotations, P2, P3
+        

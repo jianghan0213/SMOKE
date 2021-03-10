@@ -47,18 +47,19 @@ class SMOKELossComputation():
         regression_2d = torch.stack([t.get_field("reg_2d") for t in targets])
         p_2d_offsets = torch.stack([t.get_field("p_2d_offsets") for t in targets])
         p_2d_whs = torch.stack([t.get_field("p_2d_whs") for t in targets])
+        hm_corners = torch.stack([t.get_field("hm_corners") for t in targets])
 
-        return heatmaps, regression, regression_2d, dict(cls_ids=cls_ids,
-                                                         proj_points=proj_points,
-                                                         dimensions=dimensions,
-                                                         locations=locations,
-                                                         rotys=rotys,
-                                                         trans_mat=trans_mat,
-                                                         P=P,
-                                                         reg_mask=reg_mask,
-                                                         flip_mask=flip_mask,
-                                                         p_2d_offsets=p_2d_offsets,
-                                                         p_2d_whs=p_2d_whs)
+        return heatmaps, regression, regression_2d, hm_corners, dict(cls_ids=cls_ids,
+                                                                     proj_points=proj_points,
+                                                                     dimensions=dimensions,
+                                                                     locations=locations,
+                                                                     rotys=rotys,
+                                                                     trans_mat=trans_mat,
+                                                                     P=P,
+                                                                     reg_mask=reg_mask,
+                                                                     flip_mask=flip_mask,
+                                                                     p_2d_offsets=p_2d_offsets,
+                                                                     p_2d_whs=p_2d_whs)
 
     def prepare_predictions(self, targets_variables, pred_regression, pred_2d_regression):
         batch, channel, channel_2d = pred_regression.shape[0], pred_regression.shape[1], pred_2d_regression.shape[1]
@@ -146,11 +147,13 @@ class SMOKELossComputation():
             return pred_box_3d
 
     def __call__(self, predictions, targets):
-        pred_heatmap, pred_regression, targets_heatmap, targets_regression, targets_variables, pred_2d_regression, targets_2d_regression = \
-             predictions[0], predictions[1], predictions[2], predictions[3], predictions[4], predictions[5], predictions[6]
+        pred_heatmap, pred_regression, targets_heatmap, targets_regression, targets_variables, pred_2d_regression, targets_2d_regression, targets_hm_corners, head_corners = \
+             predictions[0], predictions[1], predictions[2], predictions[3], predictions[4], predictions[5], predictions[6], predictions[7], predictions[8]
 
         predict_boxes3d = self.prepare_predictions(targets_variables, pred_regression, pred_2d_regression)
         hm_loss = self.cls_loss(pred_heatmap, targets_heatmap) * self.loss_weight[0]
+
+        corners_loss = self.cls_loss(head_corners, targets_hm_corners) * self.loss_weight[0]
 
         # cls score
         targets_proj_points = targets_variables["proj_points"]
@@ -226,8 +229,7 @@ class SMOKELossComputation():
                 reg_weight_2d,
                 reduction="sum") / (self.loss_weight[2] * self.max_objs)
 
-            return hm_loss, reg_loss_ori + reg_loss_dim + reg_loss_loc + reg_loss_center_2d + reg_loss_wh_2d
-
+            return hm_loss + corners_loss, reg_loss_ori + reg_loss_dim + reg_loss_loc + reg_loss_center_2d + reg_loss_wh_2d
 
 def make_smoke_loss_evaluator(cfg):
     smoke_coder = SMOKECoder(
