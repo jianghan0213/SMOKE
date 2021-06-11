@@ -1,3 +1,4 @@
+from math import gamma
 import os
 import cv2
 import csv
@@ -36,6 +37,11 @@ class KITTIDataset(Dataset):
         self.split = cfg.DATASETS.TRAIN_SPLIT if is_train else cfg.DATASETS.TEST_SPLIT
         self.is_train = is_train
         self.transforms = transforms
+
+        self.twin_cached = False
+        self.twin_img = None
+        self.twin_target = None
+        self.twin_original_idx = None
 
         if self.split == "train":
             imageset_txt = os.path.join(root, "ImageSets", "train.txt")
@@ -79,8 +85,22 @@ class KITTIDataset(Dataset):
 
     def __getitem__(self, idx):
         # load default parameter here
+        if (self.is_train) and self.twin_cached:
+            image = cv2.cvtColor(np.asarray(self.twin_img), cv2.COLOR_RGB2BGR)
+            gamma = random.uniform(0.5, 1.5)
+            image = self.gamma_trans(image, gamma)
+            img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            target = self.twin_target
+            original_idx = self.twin_original_idx
+            cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + '_' + str(gamma) + ".jpg"), image)
+
+            if self.transforms is not None:
+                img, target = self.transforms(img, target)
+
+            self.twin_cached = False
+            return img, target, original_idx
+
         original_idx = self.label_files[idx].replace(".txt", "")
-        
         anns, P2, P3 = self.load_annotations(idx)
         use_left = True
         if (self.is_train) and (random.random() < self.right_prob):
@@ -92,7 +112,6 @@ class KITTIDataset(Dataset):
             K = P2[:3, :3]
             P = P2
             img_path = os.path.join(self.image_dir, self.image_files[idx])
-        
         
         img = Image.open(img_path)
         center = np.array([i / 2 for i in img.size], dtype=np.float32)
@@ -132,11 +151,14 @@ class KITTIDataset(Dataset):
             data=trans_affine_inv.flatten()[:6],
             resample=Image.BILINEAR,
         )
-        '''
+        
         image = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + ".jpg"), image)
+        '''
         shape = (int(image.shape[1] / 4), int(image.shape[0] / 4))
         image = cv2.resize(image, shape, interpolation = cv2.INTER_AREA)
         '''
+        
         trans_mat = get_transfrom_matrix(
             center_size,
             [self.output_width, self.output_height]
@@ -186,9 +208,8 @@ class KITTIDataset(Dataset):
             box2d[[1, 3]] = box2d[[1, 3]].clip(0, self.output_height - 1)
             h, w = box2d[3] - box2d[1], box2d[2] - box2d[0]
             
-            '''
-            cv2.circle(image, (int(point[0]), int(point[1])), 3, (255,0,0),-1)
-            '''
+            # cv2.circle(image, (int(point[0]), int(point[1])), 3, (255,0,0),-1)
+            
             if (0 < point[0] < self.output_width) and (0 < point[1] < self.output_height):
                 point_int = point.astype(np.int32)
                 p_offset = point - point_int
@@ -206,9 +227,7 @@ class KITTIDataset(Dataset):
                 reg_mask[i] = 1 if not affine else 0
                 flip_mask[i] = 1 if not affine and flipped else 0
 
-        '''
-        cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + ".jpg"), image)
-        '''
+        # cv2.imwrite(os.path.join("/root/SMOKE/debug", original_idx + ".jpg"), image)
         P = np.concatenate((P, np.ones((1, 4), dtype=np.float32)), axis=0)
         P[3, :3] = 0
         target = ParamsList(image_size=img.size,
@@ -225,10 +244,19 @@ class KITTIDataset(Dataset):
         target.add_field("reg_mask", reg_mask)
         target.add_field("flip_mask", flip_mask)
 
+        self.twin_cached = True
+        self.twin_img = img.copy()
+        self.twin_target = target
+        self.twin_original_idx = original_idx
+
         if self.transforms is not None:
             img, target = self.transforms(img, target)
-
         return img, target, original_idx
+
+    def gamma_trans(self, img, gamma):
+        gamma_table = [np.power(x/255.0, gamma)*255.0 for x in range(256)]
+        gamma_table = np.round(np.array(gamma_table)).astype(np.uint8)
+        return cv2.LUT(img, gamma_table)
 
     def load_annotations(self, idx):
         annotations = []

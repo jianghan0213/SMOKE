@@ -121,12 +121,32 @@ class SMOKELossComputation():
             return pred_box_3d
 
     def __call__(self, predictions, targets):
-        pred_heatmap, pred_regression, targets_heatmap, targets_regression, targets_variables = \
+        twins_pred_heatmap, twins_pred_regression, twins_targets_heatmap, twins_targets_regression, twins_targets_variables = \
              predictions[0], predictions[1], predictions[2], predictions[3], predictions[4]
+
+        batch = twins_pred_heatmap.shape[0]
+        origin_mask = (torch.arange(batch, dtype=torch.int8, device=twins_pred_heatmap.device) % 2) == 0
+        shadow_mask = ~origin_mask
+
+        pred_heatmap = twins_pred_heatmap[origin_mask]
+        shadow_pred_heatmap = twins_pred_heatmap[origin_mask]
+
+        targets_heatmap = twins_targets_heatmap[origin_mask]
+        pred_regression = twins_pred_regression[origin_mask]
+        targets_regression = twins_targets_regression[origin_mask]
+        targets_variables = dict()
+        targets_variables["cls_ids"] = twins_targets_variables["cls_ids"][origin_mask]
+        targets_variables["proj_points"] = twins_targets_variables["proj_points"][origin_mask]
+        targets_variables["dimensions"] = twins_targets_variables["dimensions"][origin_mask]
+        targets_variables["locations"] = twins_targets_variables["locations"][origin_mask]
+        targets_variables["rotys"] = twins_targets_variables["rotys"][origin_mask]
+        targets_variables["trans_mat"] = twins_targets_variables["trans_mat"][origin_mask]
+        targets_variables["P"] = twins_targets_variables["P"][origin_mask]
+        targets_variables["reg_mask"] = twins_targets_variables["reg_mask"][origin_mask]
+        targets_variables["flip_mask"] = twins_targets_variables["flip_mask"][origin_mask]
 
         predict_boxes3d = self.prepare_predictions(targets_variables, pred_regression)
         hm_loss = self.cls_loss(pred_heatmap, targets_heatmap) * self.loss_weight[0]
-
         # cls score
         targets_proj_points = targets_variables["proj_points"]
         batch = pred_heatmap.shape[0]
