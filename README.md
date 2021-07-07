@@ -51,11 +51,23 @@ kitti
 1. We use `conda` to manage the environment:
 ```
 conda create -n SMOKE python=3.7
+pip install cudatoolkit==10.0.130
+conda install pytorch=1.3 torchvision -c pytorch
+pip install yacs scikit-image tqdm numba fire pybind11
 ```
+
 
 2. Clone this repo:
 ```
-git clone https://github.com/lzccccc/SMOKE
+https://github.com/destinyls/SMOKE
+git checkout Re-Train-Model
+```
+
+3. Install mmlab
+```
+pip install mmcv-full==1.2.5
+pip install mmdet==2.10.0
+pip install mmdet3d==0.9.0
 ```
 
 3. Build codes:
