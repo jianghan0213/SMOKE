@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torchvision.ops import RoIAlign, RoIPool
 
 from smoke.utils.registry import Registry
 from smoke.modeling import registry
@@ -46,6 +47,9 @@ class SMOKEPredictor(nn.Module):
         self.max_objs = cfg.DATASETS.MAX_OBJECTS
         self.max_detection = cfg.TEST.DETECTIONS_PER_IMG
         self.loss_evaluator = make_smoke_loss_evaluator(cfg)
+
+        self.roi_align_box2d = RoIAlign(output_size=[1,1], spatial_scale=1, sampling_ratio=2)
+        self.roi_align_box3d = RoIAlign(output_size=[1,1], spatial_scale=1, sampling_ratio=2)
 
         self.dim_channel = get_channel_spec(regression_channels, name="dim")
         self.ori_channel = get_channel_spec(regression_channels, name="ori")
