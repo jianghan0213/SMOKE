@@ -61,19 +61,16 @@ class SMOKELossComputation():
                                                          p_2d_whs=p_2d_whs)
 
     def prepare_predictions(self, targets_variables, pred_regression, pred_2d_regression):
-        batch, channel, channel_2d = pred_regression.shape[0], pred_regression.shape[1], pred_2d_regression.shape[1]
+        batch, channel, channel_2d = pred_regression.shape[0], pred_regression.shape[-1], pred_2d_regression.shape[-1]
         targets_proj_points = targets_variables["proj_points"]
 
         # 2d box decode
-        pred_2d_regression_pois = pred_2d_regression.permute(0, 2, 1).contiguous()
-        pred_2d_regression_pois = pred_2d_regression_pois.view(-1, channel_2d)
+        pred_2d_regression_pois = pred_2d_regression.view(-1, channel_2d)
         pred_2d_center_offsets = pred_2d_regression_pois[:, :2]
         pred_2d_whs = pred_2d_regression_pois[:, 2:]
 
         # obtain prediction from points of interests
-        pred_regression_pois = pred_regression.permute(0, 2, 1).contiguous()
-        pred_regression_pois = pred_regression_pois.view(-1, channel)
-
+        pred_regression_pois = pred_regression.view(-1, channel)
         # FIXME: fix hard code here
         pred_depths_offset = pred_regression_pois[:, 0]
         pred_proj_offsets = pred_regression_pois[:, 1:3]
@@ -81,6 +78,7 @@ class SMOKELossComputation():
         pred_orientation = pred_regression_pois[:, 6:]
 
         pred_depths = self.smoke_coder.decode_depth(pred_depths_offset)
+
         pred_locations = self.smoke_coder.decode_location(
             targets_proj_points,
             pred_proj_offsets,
