@@ -74,6 +74,7 @@ def do_train(
 
         optimizer.zero_grad()
         losses.backward()
+        model.sync_gradients()
         optimizer.step()
         scheduler.step()
 

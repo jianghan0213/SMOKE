@@ -13,9 +13,11 @@ from smoke.engine import (
     launch,
 )
 from smoke.utils import comm
+from smoke.utils.dist_module import DistModule
 from smoke.engine.trainer import do_train
 from smoke.modeling.detector import build_detection_model
 from smoke.engine.test_net import run_test
+
 
 
 def train(cfg, args, model, device, distributed):
@@ -86,10 +88,13 @@ def main(args):
 
     distributed = comm.get_world_size() > 1
     if distributed:
+        '''
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False,
             find_unused_parameters=True,
         )
+        '''
+        model = DistModule(model)
 
     train(cfg, args, model, device, distributed)
 
