@@ -33,10 +33,22 @@ class PostProcessor(nn.Module):
                     size=size)
 
     def forward(self, predictions, targets):
-        pred_regression, scores, clses, ys, xs, target_varibales, box2d = \
-            predictions[0], predictions[1], predictions[2], predictions[3], predictions[4], predictions[5], predictions[6]
+        pred_heatmap, pred_regression, pred_2d_regression = \
+             predictions[0], predictions[1], predictions[2]
+        
+        batch = pred_heatmap.shape[0]
+        target_varibales = self.prepare_targets(targets)
+        heatmap = nms_hm(pred_heatmap)
+        scores, indexs, clses, ys, xs = select_topk(
+            heatmap,
+            K=self.max_detection,
+        )
 
-        pred_regression_pois = pred_regression.view(-1, self.reg_head)
+        # [N, K, 8]
+        pred_regression_pois = select_point_of_interest(
+            batch, indexs, pred_regression
+        )
+        pred_regression_pois = pred_regression_pois.view(-1, self.reg_head)
         pred_proj_points = torch.cat([xs.view(-1, 1), ys.view(-1, 1)], dim=1)
         # FIXME: fix hard code here
         pred_depths_offset = pred_regression_pois[:, 0]
@@ -64,8 +76,7 @@ class PostProcessor(nn.Module):
             pred_locations
         )
 
-        proj_box2d = False
-        if self.pred_2d and proj_box2d:
+        if self.pred_2d:
             box2d = self.smoke_coder.encode_box2d(
                 target_varibales["P"],
                 pred_rotys,

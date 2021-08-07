@@ -41,6 +41,10 @@ class KITTIDataset(Dataset):
             imageset_txt = os.path.join(root, "ImageSets", "train.txt")
         elif self.split == "val":
             imageset_txt = os.path.join(root, "ImageSets", "val.txt")
+        elif self.split == "new_train":
+            imageset_txt = os.path.join(root, "ImageSets", "new_train.txt")
+        elif self.split == "new_val":
+            imageset_txt = os.path.join(root, "ImageSets", "new_val.txt")
         elif self.split == "trainval":
             imageset_txt = os.path.join(root, "ImageSets", "trainval.txt")
         elif self.split == "test":

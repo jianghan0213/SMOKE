@@ -271,8 +271,7 @@ class DLA(nn.Module):
         self.ida_up(y, 0, len(y))
 
         # todo: this can be further cleaned
-        # x16, x8, x4
-        return [x[2], x[1], y[-1]]
+        return y[-1]
 
 
 class DLABase(nn.Module):

@@ -16,7 +16,7 @@ class SMOKEHead(nn.Module):
         self.post_processor = make_smoke_post_processor(cfg)
 
     def forward(self, features, targets=None):
-        x = self.predictor(features, targets)
+        x = self.predictor(features)
 
         if self.training:
             loss_heatmap, loss_regression = self.loss_evaluator(x, targets)
