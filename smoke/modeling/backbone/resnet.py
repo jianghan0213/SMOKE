@@ -224,6 +224,8 @@ class ResNet(nn.Module):
             url = model_urls['resnet{}'.format(num_layers)]
             pretrained_state_dict = model_zoo.load_url(url)
             print('=> loading pretrained model {}'.format(url))
+            # print('=> loading BYOL pretrained model')
+            # pretrained_state_dict = torch.load(os.path.join(os.path.dirname(__file__),'byol_r50_bs2048_accmulate2_ep200-e3b0c442.pth'))
             self.load_state_dict(pretrained_state_dict, strict=False)
         else:
             print('=> imagenet pretrained model dose not exist')
