@@ -38,6 +38,18 @@ _C.INPUT.SHIFT_SCALE_PROB_TRAIN = 0.3
 _C.INPUT.USE_RIGHT_PROB_TRAIN = 0.3
 _C.INPUT.SHIFT_SCALE_TRAIN = (0.2, 0.4)
 
+# parameters for gaussian blur
+_C.INPUT.SIGMA_MIN = 0.1
+_C.INPUT.SIGMA_MAX = 2.0
+# parameters for ColorJitter
+_C.INPUT.BRIGHTNESS = 0.4
+_C.INPUT.HUE = 0.1
+_C.INPUT.CONTRAST = 0.4
+_C.INPUT.SATURATION = 0.2
+# parameters for Solarization
+_C.INPUT.THREDHOLD = 125
+# parameters for Lighting
+
 # -----------------------------------------------------------------------------
 # Dataset
 # -----------------------------------------------------------------------------
