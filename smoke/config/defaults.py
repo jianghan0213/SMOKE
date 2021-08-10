@@ -47,7 +47,7 @@ _C.INPUT.HUE = 0.1
 _C.INPUT.CONTRAST = 0.4
 _C.INPUT.SATURATION = 0.2
 # parameters for Solarization
-_C.INPUT.THREDHOLD = 125
+_C.INPUT.THRESHOLD = 125
 # parameters for Lighting
 
 # -----------------------------------------------------------------------------

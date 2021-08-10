@@ -3,6 +3,9 @@ from torchvision.transforms import functional as F
 
 import numpy as np
 from PIL import Image, ImageFilter
+import torchvision
+from torchvision import transforms
+# import os
 
 
 class Compose():
@@ -41,6 +44,7 @@ class GaussianBlur():
         self.sigma_max = sigma_max
 
     def __call__(self, img, target):
+        img = transforms.ToPILImage()(img)
         sigma = np.random.uniform(self.sigma_min, self.sigma_max)
         img = img.filter(ImageFilter.GaussianBlur(radius=sigma))
         return img, target
