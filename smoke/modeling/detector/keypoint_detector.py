@@ -20,8 +20,9 @@ class KeypointDetector(nn.Module):
 
         self.backbone = build_backbone(cfg)
         self.heads = build_heads(cfg, self.backbone.out_channels)
+        # self.target_network = build_backbone(cfg)
 
-    def forward(self, images, targets=None):
+    def forward(self, images, targets=None): # images_1
         """
         Args:
             images:
@@ -34,6 +35,7 @@ class KeypointDetector(nn.Module):
             raise ValueError("In training mode, targets should be passed")
         images = to_image_list(images)
         features = self.backbone(images.tensors)
+        # f_clone = features.clone()
         result, detector_losses = self.heads(features, targets)
 
         if self.training:

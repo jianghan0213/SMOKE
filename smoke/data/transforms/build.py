@@ -34,9 +34,9 @@ def build_transforms(cfg, is_train=True):
     return transform
 
 # test transforms
-img = Image.open(r'C:\Users\92035\Music\实习\Mono3D\数据增强开发\000597.png')
-transform = build_transforms(cfg)
-img1, tgt1 = transform(img, img)
-img1 = transforms.ToPILImage()(img1)
-print(type(img1))
-img1.show()
+# img = Image.open(r'C:\Users\92035\Music\实习\Mono3D\数据增强开发\000597.png')
+# transform = build_transforms(cfg)
+# img1, tgt1 = transform(img, img)
+# img1 = transforms.ToPILImage()(img1)
+# print(type(img1))
+# img1.show()

@@ -78,9 +78,7 @@ class Solarization():
         img = np.where(img < self.threshold, img, 255 -img)
         return Image.fromarray(img.astype(np.uint8)), target
 
-'''
-Inserted by Han 2021.8.5 11:07
-'''
+
 class Lighting():
     """Lighting noise(AlexNet - style PCA - based noise)."""
 
